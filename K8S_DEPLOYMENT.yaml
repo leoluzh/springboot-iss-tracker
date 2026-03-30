@@ -1,0 +1,226 @@
+---
+# Exemplo de manifesto Kubernetes para ISS Tracker com Readiness Check
+# Salve como: k8s-deployment.yaml
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: iss-tracker
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: iss-tracker-config
+  namespace: iss-tracker
+data:
+  application.yaml: |
+    spring:
+      application:
+        name: iss-tracker
+    
+    management:
+      endpoints:
+        web:
+          exposure:
+            include: health,info,metrics,prometheus
+      endpoint:
+        health:
+          show-details: always
+          probes:
+            enabled: true
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: iss-tracker
+  namespace: iss-tracker
+  labels:
+    app: iss-tracker
+    version: v1
+spec:
+  replicas: 3
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: iss-tracker
+  template:
+    metadata:
+      labels:
+        app: iss-tracker
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/actuator/prometheus"
+    spec:
+      serviceAccountName: iss-tracker
+      
+      # Tempo de espera antes de desligar pods
+      terminationGracePeriodSeconds: 30
+      
+      containers:
+      - name: iss-tracker
+        image: iss-tracker:1.0.0
+        imagePullPolicy: Always
+        
+        # Portas expostas
+        ports:
+        - name: http
+          containerPort: 8080
+          protocol: TCP
+        
+        # Variáveis de ambiente
+        env:
+        - name: SPRING_PROFILES_ACTIVE
+          value: "kubernetes"
+        - name: JAVA_OPTS
+          value: "-Xmx256m -Xms128m"
+        
+        # Probes de saúde - READINESS
+        readinessProbe:
+          httpGet:
+            path: /actuator/health/readiness
+            port: http
+            scheme: HTTP
+          initialDelaySeconds: 20    # Aguarda 20s antes da primeira verificação
+          periodSeconds: 10          # Verifica a cada 10s
+          timeoutSeconds: 5          # Timeout de 5s
+          failureThreshold: 3        # Falha após 3 tentativas
+          successThreshold: 1        # Sucesso após 1 tentativa
+        
+        # Probes de saúde - LIVENESS
+        livenessProbe:
+          httpGet:
+            path: /actuator/health/liveness
+            port: http
+            scheme: HTTP
+          initialDelaySeconds: 30    # Aguarda 30s antes da primeira verificação
+          periodSeconds: 10          # Verifica a cada 10s
+          timeoutSeconds: 5          # Timeout de 5s
+          failureThreshold: 3        # Reinicia após 3 falhas seguidas
+        
+        # Probes de saúde - STARTUP (opcional)
+        startupProbe:
+          httpGet:
+            path: /actuator/health
+            port: http
+            scheme: HTTP
+          initialDelaySeconds: 0
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 30       # Máximo 5 minutos para iniciar
+        
+        # Recursos solicitados e limites
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        
+        # Segurança
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 1000
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          readOnlyRootFilesystem: true
+        
+        # Volumes
+        volumeMounts:
+        - name: tmp
+          mountPath: /tmp
+        - name: cache
+          mountPath: /app/cache
+      
+      # Volumes
+      volumes:
+      - name: tmp
+        emptyDir: {}
+      - name: cache
+        emptyDir: {}
+      
+      # Segurança do Pod
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+      
+      # Affinity rules (opcional)
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - iss-tracker
+              topologyKey: kubernetes.io/hostname
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: iss-tracker
+  namespace: iss-tracker
+  labels:
+    app: iss-tracker
+spec:
+  type: LoadBalancer
+  selector:
+    app: iss-tracker
+  ports:
+  - name: http
+    port: 80
+    targetPort: 8080
+    protocol: TCP
+  sessionAffinity: None
+
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: iss-tracker-pdb
+  namespace: iss-tracker
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: iss-tracker
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: iss-tracker
+  namespace: iss-tracker
+
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: iss-tracker
+  namespace: iss-tracker
+  labels:
+    app: iss-tracker
+spec:
+  selector:
+    matchLabels:
+      app: iss-tracker
+  endpoints:
+  - port: http
+    path: /actuator/prometheus
+    interval: 30s
+    scrapeTimeout: 10s
+

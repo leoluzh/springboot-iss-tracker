@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ISS Tracker</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg:        #03060f;
+            --panel:     #070e1f;
+            --border:    #0d2040;
+            --accent:    #00e5ff;
+            --accent2:   #ff6a00;
+            --green:     #39ff6a;
+            --dim:       #2a4a6a;
+            --text:      #c8dff4;
+            --muted:     #4a7a9b;
+            --glow:      0 0 12px rgba(0,229,255,.45);
+            --glow2:     0 0 20px rgba(0,229,255,.25);
+        }
+
+        /* ── Starfield ────────────────────────────────────── */
+        @keyframes twinkle { 0%,100%{opacity:.15} 50%{opacity:.9} }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Share Tech Mono', monospace;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 2rem 1rem 3rem;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* Generated stars */
+        body::before {
+            content: '';
+            position: fixed; inset: 0;
+            background-image:
+                    radial-gradient(1px 1px at 10% 15%, #fff 0%, transparent 100%),
+                    radial-gradient(1px 1px at 22% 68%, #fff 0%, transparent 100%),
+                    radial-gradient(1px 1px at 35% 30%, #fff 0%, transparent 100%),
+                    radial-gradient(1px 1px at 48% 82%, #fff 0%, transparent 100%),
+                    radial-gradient(1px 1px at 60% 10%, #fff 0%, transparent 100%),
+                    radial-gradient(1px 1px at 72% 55%, #fff 0%, transparent 100%),
+                    radial-gradient(1px 1px at 85% 25%, #fff 0%, transparent 100%),
+                    radial-gradient(1px 1px at 92% 75%, #fff 0%, transparent 100%),
+                    radial-gradient(1px 1px at 5%  45%, #fff 0%, transparent 100%),
+                    radial-gradient(1px 1px at 17% 90%, #fff 0%, transparent 100%),
+                    radial-gradient(1px 1px at 30% 5%,  #fff 0%, transparent 100%),
+                    radial-gradient(1px 1px at 55% 60%, #fff 0%, transparent 100%),
+                    radial-gradient(1px 1px at 78% 88%, #fff 0%, transparent 100%),
+                    radial-gradient(1.5px 1.5px at 42% 42%, #adf 0%, transparent 100%),
+                    radial-gradient(1.5px 1.5px at 65% 35%, #ffa 0%, transparent 100%),
+                    radial-gradient(1.5px 1.5px at 88% 48%, #adf 0%, transparent 100%);
+            opacity: .5;
+            pointer-events: none;
+            z-index: 0;
+            animation: twinkle 4s ease-in-out infinite alternate;
+        }
+
+        /* ── Header ───────────────────────────────────────── */
+        @keyframes flicker { 0%,100%{opacity:1} 92%{opacity:.85} 94%{opacity:1} 96%{opacity:.9} }
+
+        header {
+            position: relative; z-index: 1;
+            text-align: center;
+            margin-bottom: 1.8rem;
+        }
+
+        .logo-line {
+            display: flex; align-items: center; justify-content: center; gap: 1rem;
+            margin-bottom: .35rem;
+        }
+
+        .logo-icon {
+            width: 42px; height: 42px;
+            filter: drop-shadow(var(--glow));
+            animation: spin 18s linear infinite;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        h1 {
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 900;
+            font-size: clamp(1.4rem, 4vw, 2.4rem);
+            letter-spacing: .15em;
+            color: var(--accent);
+            text-shadow: var(--glow), 0 0 40px rgba(0,229,255,.2);
+            animation: flicker 8s ease-in-out infinite;
+        }
+
+        .subtitle {
+            font-size: .72rem;
+            letter-spacing: .35em;
+            color: var(--muted);
+            text-transform: uppercase;
+        }
+
+        /* ── Status bar ───────────────────────────────────── */
+        @keyframes pulse-dot { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.4;transform:scale(.7)} }
+
+        #status-bar {
+            position: relative; z-index: 1;
+            display: flex; align-items: center; gap: .6rem;
+            font-size: .72rem;
+            letter-spacing: .2em;
+            color: var(--muted);
+            margin-bottom: 1.4rem;
+            padding: .45rem 1.2rem;
+            border: 1px solid var(--border);
+            background: var(--panel);
+            clip-path: polygon(12px 0%, 100% 0%, calc(100% - 12px) 100%, 0% 100%);
+        }
+
+        .dot {
+            width: 8px; height: 8px; border-radius: 50%;
+            background: var(--muted);
+            animation: pulse-dot 2s ease-in-out infinite;
+        }
+
+        .dot.live { background: var(--green); box-shadow: 0 0 8px var(--green); }
+        .dot.warn { background: var(--accent2); box-shadow: 0 0 8px var(--accent2); }
+
+        #status { color: var(--text); letter-spacing: .1em; }
+
+        /* ── Map wrapper ──────────────────────────────────── */
+        #map-wrap {
+            position: relative; z-index: 1;
+            width: 100%; max-width: 900px;
+            border: 1px solid var(--dim);
+            border-radius: 4px;
+            box-shadow: 0 0 0 1px var(--border), var(--glow2), inset 0 0 60px rgba(0,0,0,.6);
+            overflow: hidden;
+            background: #05101e;
+        }
+
+        /* Corner brackets */
+        #map-wrap::before, #map-wrap::after,
+        .corner-br, .corner-bl {
+            content: ''; position: absolute;
+            width: 18px; height: 18px;
+            z-index: 10; pointer-events: none;
+        }
+        #map-wrap::before { top:0; left:0;  border-top: 2px solid var(--accent); border-left:  2px solid var(--accent); }
+        #map-wrap::after  { top:0; right:0; border-top: 2px solid var(--accent); border-right: 2px solid var(--accent); }
+        .corner-br { bottom:0; right:0; border-bottom: 2px solid var(--accent); border-right: 2px solid var(--accent); }
+        .corner-bl { bottom:0; left:0;  border-bottom: 2px solid var(--accent); border-left:  2px solid var(--accent); }
+
+        /* Scanlines */
+        #map-wrap .scanlines {
+            position: absolute; inset: 0; z-index: 5; pointer-events: none;
+            background: repeating-linear-gradient(
+                    to bottom,
+                    transparent 0px, transparent 3px,
+                    rgba(0,0,0,.07) 3px, rgba(0,0,0,.07) 4px
+            );
+        }
+
+        #map-container {
+            position: relative;
+            width: 100%;
+            padding-top: 50%; /* 2:1 map ratio */
+        }
+
+        #world-map {
+            position: absolute; inset: 0;
+            width: 100%; height: 100%;
+            object-fit: cover;
+            opacity: .55;
+            filter: saturate(.3) hue-rotate(180deg) brightness(.8);
+        }
+
+        /* Grid overlay */
+        #map-container::before {
+            content: '';
+            position: absolute; inset: 0; z-index: 2; pointer-events: none;
+            background-image:
+                    linear-gradient(rgba(0,229,255,.06) 1px, transparent 1px),
+                    linear-gradient(90deg, rgba(0,229,255,.06) 1px, transparent 1px);
+            background-size: 10% 16.66%;
+        }
+
+        /* Equator & prime meridian */
+        #map-container::after {
+            content: '';
+            position: absolute;
+            top: 50%; left: 0; right: 0; height: 1px;
+            background: rgba(0,229,255,.12);
+            z-index: 2; pointer-events: none;
+        }
+
+        /* ── ISS Marker ───────────────────────────────────── */
+        @keyframes orbit-ring {
+            from { transform: translate(-50%,-50%) rotate(0deg); }
+            to   { transform: translate(-50%,-50%) rotate(360deg); }
+        }
+        @keyframes ping {
+            0%   { transform: translate(-50%,-50%) scale(1); opacity:.8; }
+            100% { transform: translate(-50%,-50%) scale(3.5); opacity:0; }
+        }
+
+        #iss-marker {
+            position: absolute;
+            width: 28px; height: 28px;
+            z-index: 6;
+            pointer-events: none;
+            transform: translate(-50%, -50%);
+            transition: left .9s cubic-bezier(.25,.46,.45,.94),
+            top  .9s cubic-bezier(.25,.46,.45,.94);
+        }
+
+        /* Core dot */
+        #iss-marker::before {
+            content: '';
+            position: absolute; inset: 10px;
+            border-radius: 50%;
+            background: var(--accent);
+            box-shadow: 0 0 10px var(--accent), 0 0 20px var(--accent);
+        }
+
+        /* Ping ring */
+        #iss-marker::after {
+            content: '';
+            position: absolute; inset: 10px;
+            border-radius: 50%;
+            background: transparent;
+            border: 1.5px solid var(--accent);
+            animation: ping 2s ease-out infinite;
+        }
+
+        .iss-orbit-ring {
+            position: absolute; inset: 0;
+            border: 1.5px dashed rgba(0,229,255,.5);
+            border-radius: 50%;
+            animation: orbit-ring 4s linear infinite;
+        }
+
+        /* ── Coords panel ─────────────────────────────────── */
+        #coords-panel {
+            position: relative; z-index: 1;
+            width: 100%; max-width: 900px;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1px;
+            margin-top: 1px;
+            background: var(--border);
+            border: 1px solid var(--border);
+            border-top: none;
+        }
+
+        .coord-cell {
+            background: var(--panel);
+            padding: .9rem 1.2rem;
+            display: flex; flex-direction: column; gap: .25rem;
+        }
+
+        .coord-label {
+            font-size: .62rem;
+            letter-spacing: .3em;
+            color: var(--muted);
+            text-transform: uppercase;
+        }
+
+        .coord-value {
+            font-family: 'Orbitron', sans-serif;
+            font-size: clamp(1rem, 2.5vw, 1.35rem);
+            font-weight: 700;
+            color: var(--accent);
+            text-shadow: var(--glow);
+            min-height: 1.6em;
+        }
+
+        /* ── Footer ───────────────────────────────────────── */
+        footer {
+            position: relative; z-index: 1;
+            margin-top: 2rem;
+            font-size: .65rem;
+            letter-spacing: .25em;
+            color: var(--muted);
+            text-transform: uppercase;
+        }
+        footer a { color: var(--dim); text-decoration: none; border-bottom: 1px solid var(--border); }
+        footer a:hover { color: var(--accent); }
+
+        /* ── Decorative HUD lines ─────────────────────────── */
+        .hud-line {
+            position: relative; z-index: 1;
+            width: 100%; max-width: 900px;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--dim), transparent);
+            margin: .4rem 0;
+        }
+
+        /* ── Responsive ───────────────────────────────────── */
+        @media (max-width: 480px) {
+            #coords-panel { grid-template-columns: 1fr 1fr; }
+            .coord-cell:last-child { grid-column: 1 / -1; }
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="logo-line">
+        <!-- ISS SVG icon -->
+        <svg class="logo-icon" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg">
+            <line x1="30" y1="8"  x2="30" y2="52" stroke="#00e5ff" stroke-width="2.5"/>
+            <line x1="8"  y1="30" x2="52" y2="30" stroke="#00e5ff" stroke-width="2.5"/>
+            <rect x="14" y="25"  width="32" height="10" rx="2" fill="none" stroke="#00e5ff" stroke-width="1.5"/>
+            <rect x="4"  y="27"  width="12" height="6"  rx="1" fill="#00e5ff" opacity=".35"/>
+            <rect x="44" y="27"  width="12" height="6"  rx="1" fill="#00e5ff" opacity=".35"/>
+            <circle cx="30" cy="30" r="4" fill="#00e5ff"/>
+        </svg>
+        <h1>ISS TRACKER</h1>
+    </div>
+    <div class="subtitle">International Space Station &mdash; Real-Time Position</div>
+</header>
+
+<div id="status-bar">
+    <div class="dot" id="status-dot"></div>
+    <span id="status">Connecting to live feed...</span>
+</div>
+
+<div id="map-wrap">
+    <div class="scanlines"></div>
+    <div class="corner-br"></div>
+    <div class="corner-bl"></div>
+    <div id="map-container">
+        <img id="world-map"
+             src="https://upload.wikimedia.org/wikipedia/commons/thumb/8/80/World_map_-_low_resolution.svg/1280px-World_map_-_low_resolution.svg.png"
+             alt="World map">
+        <div id="iss-marker">
+            <div class="iss-orbit-ring"></div>
+        </div>
+    </div>
+</div>
+
+<div id="coords-panel">
+    <div class="coord-cell">
+        <div class="coord-label">Latitude</div>
+        <div class="coord-value" id="lat">—</div>
+    </div>
+    <div class="coord-cell">
+        <div class="coord-label">Longitude</div>
+        <div class="coord-value" id="lon">—</div>
+    </div>
+    <div class="coord-cell">
+        <div class="coord-label">Last Update</div>
+        <div class="coord-value" id="updated" style="font-size:clamp(.8rem,2vw,1rem)">—</div>
+    </div>
+</div>
+
+<div class="hud-line"></div>
+
+<footer>
+    Telemetry via <a href="https://open-notify.org/" target="_blank">Open Notify</a>
+    &nbsp;·&nbsp; Updates every 10 s
+</footer>
+
+<script>
+    const MAP_WIDTH  = 1280;
+    const MAP_HEIGHT = 640;
+
+    const marker   = document.getElementById("iss-marker");
+    const statusEl = document.getElementById("status");
+    const dotEl    = document.getElementById("status-dot");
+    const latEl    = document.getElementById("lat");
+    const lonEl    = document.getElementById("lon");
+    const updatedEl= document.getElementById("updated");
+
+    function placeMarker(pixelX, pixelY) {
+        const leftPercent = (pixelX / MAP_WIDTH)  * 100;
+        const topPercent  = (pixelY / MAP_HEIGHT) * 100;
+        marker.style.left = leftPercent + "%";
+        marker.style.top  = topPercent  + "%";
+    }
+
+    function renderFix(fix) {
+        placeMarker(fix.pixelX, fix.pixelY);
+        latEl.textContent     = fix.latitude.toFixed(4)  + "°";
+        lonEl.textContent     = fix.longitude.toFixed(4) + "°";
+        // Check both property names since updateAt vs updatedAt might cause issues
+        const timestamp = fix.updateAt || fix.updatedAt;
+        if (timestamp) {
+            updatedEl.textContent = new Date(timestamp).toLocaleTimeString();
+        } else {
+            updatedEl.textContent = new Date().toLocaleTimeString();
+        }
+    }
+
+    fetch("/api/iss/position")
+        .then(r => r.status === 204 ? null : r.json())
+        .then(fix => { if (fix) renderFix(fix); })
+        .catch(() => {});
+
+    // Listen to custom SSE events named 'position-update'
+    const source = new EventSource("/api/iss/stream");
+
+    source.onopen = () => {
+        statusEl.textContent = "Live feed active — updating every 10 s";
+        statusEl.style.color = "var(--green)";
+        dotEl.classList.add("live");
+        dotEl.classList.remove("warn");
+    };
+
+    // The ServerSentEvent has an event name "position-update"
+    // Add an explicit listener for this custom event type
+    source.addEventListener("position-update", (event) => {
+        console.log("Received position update event:", event.data);
+        const fix = JSON.parse(event.data);
+        renderFix(fix);
+    });
+
+    // Fallback for default "message" events just in case
+    source.onmessage = (event) => {
+        console.log("Received default message event:", event.data);
+        const fix = JSON.parse(event.data);
+        renderFix(fix);
+    };
+
+    source.onerror = () => {
+        statusEl.textContent = "Signal lost — attempting reconnection...";
+        statusEl.style.color = "var(--accent2)";
+        dotEl.classList.remove("live");
+        dotEl.classList.add("warn");
+    };
+</script>
+</body>
+</html>

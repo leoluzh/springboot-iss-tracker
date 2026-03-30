@@ -1,0 +1,36 @@
+spring:
+  application:
+    name: iss-tracker
+  boot:
+    docker:
+      compose:
+        skip: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus,env,loggers
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: always
+    info:
+      enabled: true
+  info:
+    java:
+      enabled: true
+    os:
+      enabled: true
+  metrics:
+    export:
+      simple:
+        enabled: true
+
+# Configuração de timeouts para o Feign Client
+feign:
+  client:
+    config:
+      default:
+        connectTimeout: 15000 # Tempo em milissegundos para estabelecer a conexão
+        readTimeout: 15000    # Tempo em milissegundos para ler os dados após a conexão
