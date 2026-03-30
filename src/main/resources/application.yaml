@@ -6,6 +6,13 @@ spring:
       compose:
         skip: true
 
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true
+
+
 management:
   endpoints:
     web:
