@@ -20,7 +20,10 @@ A full-stack application built with Spring Boot and modern web technologies to t
 _The main interface of the ISS Tracker application._
 
 ![ISS Tracker Map View](./docs/images/iss-tracker-map.png)
-_A detailed view of the interactive map with the ISS trail and terminator line._
+_A detailed view of the interactive map with the ISS and terminator line._
+
+![ISS Tracker Trail View](./docs/images/iss-tracker-map-trail.png)
+_A view of the map displaying the trajectory trail of the ISS over time._
 
 ---
 
