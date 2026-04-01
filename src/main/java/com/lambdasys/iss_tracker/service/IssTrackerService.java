@@ -1,6 +1,7 @@
 package com.lambdasys.iss_tracker.service;
 
 import com.lambdasys.iss_tracker.client.IssApiClient;
+import com.lambdasys.iss_tracker.client.data.IssAstrosResponse;
 import com.lambdasys.iss_tracker.client.data.IssNowResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -14,4 +15,9 @@ public class IssTrackerService {
     public IssNowResponse getCurrentIssPosition() {
         return issApiClient.getIssNow();
     }
+
+    public IssAstrosResponse getCurrentIssCrew(){
+        return issApiClient.getIssPass();
+    }
+
 }

@@ -1,6 +1,7 @@
 package com.lambdasys.iss_tracker.client;
 
 import com.lambdasys.iss_tracker.client.data.IssNowResponse;
+import com.lambdasys.iss_tracker.client.data.IssAstrosResponse;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
 
@@ -9,4 +10,8 @@ public interface IssApiClient {
 
     @GetMapping("/iss-now.json")
     IssNowResponse getIssNow();
+
+    @GetMapping("/astros.json")
+    IssAstrosResponse getIssPass();
+
 }

@@ -1,5 +1,6 @@
 package com.lambdasys.iss_tracker.controller;
 
+import com.lambdasys.iss_tracker.data.IssCrew;
 import com.lambdasys.iss_tracker.data.PositionFix;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -50,4 +51,13 @@ public interface IssTrackerControllerDocs {
     })
     @GetMapping(value = "/stream", produces = "text/event-stream")
     Flux<ServerSentEvent<PositionFix>> streamIssPositions();
+
+    @GetMapping("/crew")
+
+    Mono<ResponseEntity<IssCrew>> getCurrentIssCrew();
+
+    @GetMapping(value = "/crew/stream", produces = "text/event-stream")
+    Flux<ServerSentEvent<IssCrew>> streamIssCrew();
+
+
 }

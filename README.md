@@ -87,8 +87,15 @@ The frontend is a single-page application crafted with vanilla HTML, CSS, and Ja
 
 ---
 
-## 📄 API Endpoints
+## 📄 Main Endpoints
 
+### UI & Map
+-   `GET /`: The main landing page with project information.
+-   `GET /tracker-leaflet`: The interactive real-time map.
+
+### API & Data
 -   `GET /api/iss/position`: Fetches the last known position of the ISS.
 -   `GET /api/iss/stream`: Subscribes to a real-time stream (SSE) of ISS position updates.
+
+### Documentation
 -   `GET /swagger-ui.html`: Access the interactive API documentation.

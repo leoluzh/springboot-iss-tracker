@@ -49,7 +49,9 @@
  */
 package com.lambdasys.iss_tracker.controller;
 
+import com.lambdasys.iss_tracker.data.IssCrew;
 import com.lambdasys.iss_tracker.data.PositionFix;
+import com.lambdasys.iss_tracker.service.IssCrewCacheService;
 import com.lambdasys.iss_tracker.service.IssPositionCacheService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -66,6 +68,7 @@ public class IssTrackerController implements IssTrackerControllerDocs {
 
     /** Serviço para acessar as atualizações de posição reativa da ISS */
     private final IssPositionCacheService positionCacheService;
+    private final IssCrewCacheService crewCacheService;
 
     /**
      * ## 📍 Obtém a Posição Atual da ISS
@@ -122,4 +125,16 @@ public class IssTrackerController implements IssTrackerControllerDocs {
     public Flux<ServerSentEvent<PositionFix>> streamIssPositions() {
         return positionCacheService.streamSSE();
     }
+
+
+    @Override
+    public Mono<ResponseEntity<IssCrew>> getCurrentIssCrew() {
+        return Mono.fromCallable(()-> ResponseEntity.ok(crewCacheService.getLatestCrew()));
+    }
+
+    @Override
+    public Flux<ServerSentEvent<IssCrew>> streamIssCrew() {
+        return crewCacheService.streamSSE();
+    }
+
 }
